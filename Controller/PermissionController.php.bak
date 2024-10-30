@@ -1,0 +1,76 @@
+<?php
+class PermissionController extends Controller {
+    public function index() {
+        if (permission_check('permission management')) {
+            if (!empty($_POST)) {
+                // add new permission
+                $flag = true;
+                $msg = '';
+                if (empty($_POST['name'])) {
+                    $flag = false;
+                    $msg .= alert_msg('Permission name is required.');
+                }
+                if ($flag) {
+                    $check = (new PermissionRepository())->addPermission($_POST['name']);
+                    if ($check < 0) {
+                        $msg .= alert_msg('Permission name already exists.');
+                    } elseif ($check = 0) {
+                        $msg .= alert_msg('Fail to add Permission.');
+                    } else {
+                        $msg .= alert_msg('Permission added successfully.', 1);
+                    }
+                }
+                $_SESSION['global_msg'] .= $msg;
+            }
+            $data = (new PermissionRepository())->getAllPermissions();
+            if (!$data) $this->_500();
+            else $this->show('View/permissions/index', $data);
+        } else $this->_403();
+    }
+
+    public function delete() {
+        if (permission_check('permission management')) {
+            if (empty($_GET['id'])) $this->_404();
+            else {
+                $check = (new PermissionRepository())->deletePermission($_GET['id']);
+                if ($check) redirect_to('?cont=perm', alert_msg('Permission deleted successfully.', 1));
+                else redirect_to('?cont=perm', alert_msg('Failed to delete Permission.'));
+            }
+        } else $this->_403();
+    }
+
+    public function edit() {
+        if (permission_check('permission management')) {
+            if (empty($_GET['id'])) $this->_404();
+            else {
+                $data = (new PermissionRepository())->getPermission($_GET['id']);
+                if (!$data) $this->_500();
+                else {
+                    $flag = true;
+                    $msg = '';
+                    if (empty($_POST['new_name'])) {
+                        $flag = false;
+                        $msg .= alert_msg('Permission name is required.');
+                    }
+
+                    if ($flag) {
+                        $check = (new PermissionRepository())->editPermission($_GET['id'], $_POST['new_name']);
+                        if ($check == 0) {
+                            $msg .= alert_msg('Permission name already exists.');
+                        } elseif ($check == 1) {
+                            $msg .= alert_msg('Permission updated successfully.', 1);
+                            redirect_to('?cont=perm', $msg);
+                        } elseif ($check == -1) {
+                            $msg .= alert_msg('Failed to update Permission.');
+                        } else {
+                            $this->_500();
+                        }
+
+                        $_SESSION['global_msg'] .= $msg;
+                    }
+                    $this->show('View/permissions/edit', $data);
+                }
+            }
+        } else $this->_403();
+    }
+}
